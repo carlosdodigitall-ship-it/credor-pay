@@ -123,7 +123,7 @@ function buildInstallmentSchedule(contract: Contract, payments: Payment[]): Inst
       ...row,
       received,
       balance,
-      status: balance <= 0.009 ? 'Quitada' : received > 0 ? 'Parcial' : row.dueDate < today ? 'Atrasada' : 'A vencer',
+      status: (balance <= 0.009 ? 'Quitada' : received > 0 ? 'Parcial' : row.dueDate < today ? 'Atrasada' : 'A vencer') as InstallmentRow['status'],
     };
   });
 }
