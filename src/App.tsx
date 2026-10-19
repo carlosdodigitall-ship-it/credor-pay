@@ -174,7 +174,7 @@ export default function App() {
   }
   function exportCsv() {
     const rows = [['ID', 'Cliente', 'Valor principal', 'Valor total', 'Parcelas', 'Pagas', 'Vencimento', 'Status'], ...contracts.map(c => [c.id, c.customerName, c.principal, c.total, c.installments, c.paid, c.dueDate, c.status])];
-    const csv = rows.map(row => row.map(cell => '"' + String(cell).replaceAll('"', '""') + '"').join(';')).join('\n');
+    const csv = rows.map(row => row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(';')).join('\n');
     const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }));
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'credor-pay-relatorio.csv'; anchor.click(); URL.revokeObjectURL(url);
     setNotice('Relatório CSV exportado.');
