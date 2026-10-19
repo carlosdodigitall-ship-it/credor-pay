@@ -209,8 +209,8 @@ export default function App() {
     const status = String(data.get('status') || 'Ativo') as Customer['status'];
     const acknowledged = data.get('consentAcknowledged') === 'on';
     if (!name) { setNotice('Informe o nome do cliente.'); return; }
-    const normalizedDocument = documentNumber.replace(/\\D/g, '');
-    if (normalizedDocument && customers.some(customer => (customer.documentNumber || '').replace(/\\D/g, '') === normalizedDocument)) {
+    const normalizedDocument = documentNumber.replace(/\D/g, '');
+    if (normalizedDocument && customers.some(customer => (customer.documentNumber || '').replace(/\D/g, '') === normalizedDocument)) {
       setNotice('Já existe um cliente cadastrado com esse CPF/CNPJ.');
       return;
     }
