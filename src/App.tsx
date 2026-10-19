@@ -10,8 +10,10 @@ import {
 type Screen = 'home' | 'login' | 'register' | 'dashboard';
 type Section = 'overview' | 'customers' | 'contracts' | 'receivables' | 'cashflow' | 'reports' | 'settings';
 type Customer = { id: string; name: string; email: string; phone: string; status: 'Ativo' | 'Inativo'; createdAt: string };
-type Contract = { id: string; customerId: string; customerName: string; principal: number; total: number; installments: number; paid: number; paidAmount?: number; dueDate: string; status: 'Em dia' | 'Atrasado' | 'Quitado'; createdAt: string };
-type Payment = { id: string; customerName: string; amount: number; date: string; method: string; status: 'Confirmado' | 'Pendente'; contractId: string };
+type Contract = { id: string; customerId: string; customerName: string; principal: number; total: number; installments: number; paid: number; paidAmount?: number; dueDate: string; firstDueDate?: string; status: 'Em dia' | 'Atrasado' | 'Quitado'; createdAt: string };
+type Payment = { id: string; customerName: string; amount: number; date: string; method: string; status: 'Confirmado' | 'Pendente'; contractId: string; allocations?: { installment: number; amount: number }[] };
+
+type InstallmentRow = { number: number; dueDate: string; amount: number; received: number; balance: number; status: 'Quitada' | 'Parcial' | 'Atrasada' | 'A vencer' };
 type DemoUser = { name: string; email: string; company: string };
 type ModalKind = 'customer' | 'contract' | 'payment' | null;
 
@@ -66,6 +68,64 @@ function initials(name: string) {
 }
 function makeId(prefix: string) {
   return prefix + '-' + Math.random().toString(36).slice(2, 7).toUpperCase();
+}
+
+function addMonthsToDate(value: string, offset: number) {
+  const [year, month, day] = value.split('-').map(Number);
+  const targetMonth = month - 1 + offset;
+  const lastDay = new Date(year, targetMonth + 1, 0).getDate();
+  const date = new Date(year, targetMonth, Math.min(day, lastDay), 12);
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+}
+
+function buildInstallmentSchedule(contract: Contract, payments: Payment[]): InstallmentRow[] {
+  const firstDueDate = contract.firstDueDate || contract.dueDate;
+  const baseAmount = Math.round((contract.total / Math.max(1, contract.installments)) * 100) / 100;
+  const rows: InstallmentRow[] = Array.from({ length: Math.max(1, contract.installments) }, (_, index) => ({
+    number: index + 1,
+    dueDate: addMonthsToDate(firstDueDate, index),
+    amount: index === contract.installments - 1
+      ? Math.round((contract.total - baseAmount * (contract.installments - 1)) * 100) / 100
+      : baseAmount,
+    received: 0,
+    balance: 0,
+    status: 'A vencer' as const,
+  }));
+  const related = payments
+    .filter(payment => payment.contractId === contract.id && payment.status === 'Confirmado')
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+
+  related.forEach(payment => {
+    if (payment.allocations?.length) {
+      payment.allocations.forEach(allocation => {
+        const row = rows[allocation.installment - 1];
+        if (row) row.received = Math.round((row.received + allocation.amount) * 100) / 100;
+      });
+      return;
+    }
+    // Migra recebimentos antigos sem alocação detalhada distribuindo-os pelas parcelas mais antigas.
+    let remaining = payment.amount;
+    rows.forEach(row => {
+      if (remaining <= 0.009) return;
+      const available = Math.max(0, row.amount - row.received);
+      const applied = Math.min(available, remaining);
+      row.received = Math.round((row.received + applied) * 100) / 100;
+      remaining = Math.round((remaining - applied) * 100) / 100;
+    });
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  return rows.map(row => {
+    const received = Math.min(row.amount, Math.round(row.received * 100) / 100);
+    const balance = Math.max(0, Math.round((row.amount - received) * 100) / 100);
+    return {
+      ...row,
+      received,
+      balance,
+      status: balance <= 0.009 ? 'Quitada' : received > 0 ? 'Parcial' : row.dueDate < today ? 'Atrasada' : 'A vencer',
+    };
+  });
 }
 
 function Brand({ light = false }: { light?: boolean }) {
@@ -151,7 +211,7 @@ export default function App() {
     const dueDate = String(data.get('dueDate') || '');
     if (!customer || principal <= 0 || total < principal || installments < 1 || !dueDate) return;
     const today = new Date().toISOString().slice(0, 10);
-    setContracts(prev => [{ id: makeId('CTR'), customerId, customerName: customer.name, principal, total, installments, paid: 0, paidAmount: 0, dueDate, status: dueDate < today ? 'Atrasado' : 'Em dia', createdAt: today }, ...prev]);
+    setContracts(prev => [{ id: makeId('CTR'), customerId, customerName: customer.name, principal, total, installments, paid: 0, paidAmount: 0, dueDate, firstDueDate: dueDate, status: dueDate < today ? 'Atrasado' : 'Em dia', createdAt: today }, ...prev]);
     setModal(null); setNotice('Contrato de demonstração criado.');
   }
   function addPayment(event: React.FormEvent<HTMLFormElement>) {
@@ -170,14 +230,30 @@ export default function App() {
       return;
     }
     const nextPaidAmount = Math.min(contract.total, alreadyPaid + amount);
-    const nextPaidInstallments = Math.min(contract.installments, Math.floor((nextPaidAmount / contract.total) * contract.installments + 1e-8));
-    setPayments(prev => [{ id: makeId('REC'), customerName: contract.customerName, amount, date, method, status: 'Confirmado', contractId }, ...prev]);
-    setContracts(prev => prev.map(item => item.id === contractId ? {
-      ...item,
-      paidAmount: nextPaidAmount,
-      paid: nextPaidInstallments,
-      status: nextPaidAmount >= item.total - 0.009 ? 'Quitado' : (item.dueDate < new Date().toISOString().slice(0, 10) ? 'Atrasado' : 'Em dia')
-    } : item));
+    const currentSchedule = buildInstallmentSchedule(contract, payments);
+    let remainingToAllocate = amount;
+    const allocations: { installment: number; amount: number }[] = [];
+    currentSchedule.forEach(row => {
+      if (remainingToAllocate <= 0.009 || row.balance <= 0.009) return;
+      const applied = Math.min(row.balance, remainingToAllocate);
+      allocations.push({ installment: row.number, amount: Math.round(applied * 100) / 100 });
+      remainingToAllocate = Math.round((remainingToAllocate - applied) * 100) / 100;
+    });
+    const newPayment: Payment = { id: makeId('REC'), customerName: contract.customerName, amount, date, method, status: 'Confirmado', contractId, allocations };
+    const nextPayments = [newPayment, ...payments];
+    setPayments(nextPayments);
+    setContracts(prev => prev.map(item => {
+      if (item.id !== contractId) return item;
+      const schedule = buildInstallmentSchedule(item, nextPayments);
+      const firstUnpaid = schedule.find(row => row.balance > 0.009);
+      return {
+        ...item,
+        paidAmount: nextPaidAmount,
+        paid: schedule.filter(row => row.balance <= 0.009).length,
+        dueDate: firstUnpaid?.dueDate || item.dueDate,
+        status: !firstUnpaid ? 'Quitado' : (schedule.some(row => row.balance > 0.009 && row.dueDate < new Date().toISOString().slice(0, 10)) ? 'Atrasado' : 'Em dia')
+      };
+    }));
     setModal(null); setNotice('Recebimento registrado; saldo atualizado.');
   }
   function exportBackup() {
@@ -266,7 +342,7 @@ export default function App() {
       <div className="page-content">
         {section === 'overview' && <Overview user={user} totals={totals} customers={customers} contracts={contracts} payments={payments} onSection={setSection} onNew={(kind) => setModal(kind)} />}
         {section === 'customers' && <Customers customers={customers} search={search} setSearch={setSearch} onNew={() => setModal('customer')} />}
-        {section === 'contracts' && <Contracts contracts={contracts} search={search} setSearch={setSearch} onNew={() => setModal('contract')} onExport={exportCsv} />}
+        {section === 'contracts' && <Contracts contracts={contracts} payments={payments} search={search} setSearch={setSearch} onNew={() => setModal('contract')} onExport={exportCsv} />}
         {section === 'receivables' && <Receivables contracts={contracts} payments={payments} onNew={() => setModal('payment')} />}
         {section === 'cashflow' && <Cashflow payments={payments} totals={totals} onNew={() => setModal('payment')} onExport={exportCsv} />}
         {section === 'reports' && <Reports contracts={contracts} customers={customers} payments={payments} onExport={exportCsv} />}
@@ -319,9 +395,10 @@ function Customers({ customers, search, setSearch, onNew }: { customers: Custome
   const filtered = customers.filter(c => [c.name, c.email, c.id, c.phone].some(v => v.toLowerCase().includes(search.toLowerCase())));
   return <><PageHeading eyebrow="RELACIONAMENTO" title="Clientes" subtitle="Centralize os dados e acompanhe o relacionamento com sua carteira." action={<button className="button button-primary" onClick={onNew}><Plus size={17}/> Novo cliente</button>}/><div className="metric-grid compact-metrics"><MetricCard label="Total de clientes" value={String(customers.length)} icon={Users} tone="blue" foot="cadastros locais"/><MetricCard label="Clientes ativos" value={String(customers.filter(c => c.status === 'Ativo').length)} icon={BadgeCheck} tone="green" foot="status cadastral"/><MetricCard label="Novos neste mês" value={String(customers.filter(c => c.createdAt.slice(0, 7) === new Date().toISOString().slice(0, 7)).length)} icon={TrendingUp} tone="violet" foot="na demonstração"/></div><section className="panel table-panel"><div className="panel-heading"><div><h2>Todos os clientes</h2><p>{filtered.length} registros encontrados</p></div><button className="icon-button" aria-label="Filtros" onClick={() => setSearch('')}><SlidersHorizontal size={17}/></button></div><TableToolbar search={search} setSearch={setSearch} placeholder="Buscar por nome, e-mail ou código..."/><div className="table-wrap"><table><thead><tr><th>Cliente</th><th>Contato</th><th>Cadastrado em</th><th>Status</th><th><span className="sr-only">Ações</span></th></tr></thead><tbody>{filtered.map(c => <tr key={c.id}><td><div className="table-person"><span className="avatar">{initials(c.name)}</span><span><strong>{c.name}</strong><small>{c.id}</small></span></div></td><td><span className="cell-main">{c.email}</span><small className="cell-sub">{c.phone || 'Telefone não informado'}</small></td><td>{dateBR(c.createdAt)}</td><td><Status>{c.status}</Status></td><td><button className="icon-button row-more" title="Ações" onClick={() => window.alert('Ações detalhadas serão adicionadas na próxima etapa do MVP.')}><ChevronDown size={16}/></button></td></tr>)}</tbody></table>{filtered.length === 0 && <EmptyState title="Nenhum cliente encontrado" text="Tente outro termo ou cadastre um novo cliente."/>}</div></section></>;
 }
-function Contracts({ contracts, search, setSearch, onNew, onExport }: { contracts: Contract[]; search: string; setSearch: (s: string) => void; onNew: () => void; onExport: () => void }) {
+function Contracts({ contracts, payments, search, setSearch, onNew, onExport }: { contracts: Contract[]; payments: Payment[]; search: string; setSearch: (s: string) => void; onNew: () => void; onExport: () => void }) {
+  const [expandedContract, setExpandedContract] = useState<string | null>(null);
   const filtered = contracts.filter(c => [c.id, c.customerName, c.status].some(v => v.toLowerCase().includes(search.toLowerCase())));
-  return <><PageHeading eyebrow="OPERAÇÕES DE CRÉDITO" title="Contratos" subtitle="Consulte as condições e acompanhe o andamento de cada contrato." action={<button className="button button-primary" onClick={onNew}><Plus size={17}/> Novo contrato</button>}/><div className="metric-grid compact-metrics"><MetricCard label="Contratos ativos" value={String(contracts.filter(c => c.status !== 'Quitado').length)} icon={FileText} tone="blue" foot="em andamento"/><MetricCard label="Capital contratado" value={money(contracts.reduce((s, c) => s + c.principal, 0))} icon={BriefcaseBusiness} tone="violet" foot="valor principal"/><MetricCard label="Contratos quitados" value={String(contracts.filter(c => c.status === 'Quitado').length)} icon={Check} tone="green" foot="concluídos"/></div><section className="panel table-panel"><div className="panel-heading"><div><h2>Carteira de contratos</h2><p>Contratos cadastrados nesta operação</p></div><button className="button button-outline button-small" onClick={onExport}><Download size={15}/> Exportar CSV</button></div><TableToolbar search={search} setSearch={setSearch} placeholder="Buscar contrato ou cliente..."/><div className="table-wrap"><table><thead><tr><th>Contrato / Cliente</th><th>Valor principal</th><th>Progresso</th><th>Próximo vencimento</th><th>Status</th></tr></thead><tbody>{filtered.map(c => <tr key={c.id}><td><div className="table-person"><span className="table-icon"><FileText size={17}/></span><span><strong>{c.id}</strong><small>{c.customerName}</small></span></div></td><td><span className="cell-main">{money(c.principal)}</span><small className="cell-sub">Total previsto: {money(c.total)}</small></td><td><div className="progress-cell"><div className="progress-track"><i style={{ width: `${Math.min(100, c.paid / c.installments * 100)}%` }}/></div><small>{c.paid} de {c.installments} parcelas</small></div></td><td>{dateBR(c.dueDate)}</td><td><Status>{c.status}</Status></td></tr>)}</tbody></table>{filtered.length === 0 && <EmptyState title="Nenhum contrato encontrado" text="Ajuste sua busca ou cadastre um contrato."/>}</div></section></>;
+  return <><PageHeading eyebrow="OPERAÇÕES DE CRÉDITO" title="Contratos" subtitle="Consulte as condições e acompanhe o andamento de cada contrato." action={<button className="button button-primary" onClick={onNew}><Plus size={17}/> Novo contrato</button>}/><div className="metric-grid compact-metrics"><MetricCard label="Contratos ativos" value={String(contracts.filter(c => c.status !== 'Quitado').length)} icon={FileText} tone="blue" foot="em andamento"/><MetricCard label="Capital contratado" value={money(contracts.reduce((s, c) => s + c.principal, 0))} icon={BriefcaseBusiness} tone="violet" foot="valor principal"/><MetricCard label="Contratos quitados" value={String(contracts.filter(c => c.status === 'Quitado').length)} icon={Check} tone="green" foot="concluídos"/></div><section className="panel table-panel"><div className="panel-heading"><div><h2>Carteira de contratos</h2><p>Contratos cadastrados nesta operação</p></div><button className="button button-outline button-small" onClick={onExport}><Download size={15}/> Exportar CSV</button></div><TableToolbar search={search} setSearch={setSearch} placeholder="Buscar contrato ou cliente..."/><div className="table-wrap"><table><thead><tr><th>Contrato / Cliente</th><th>Valor principal</th><th>Progresso</th><th>Próximo vencimento</th><th>Status</th><th>Parcelas</th></tr></thead><tbody>{filtered.map(c => <React.Fragment key={c.id}><tr><td><div className="table-person"><span className="table-icon"><FileText size={17}/></span><span><strong>{c.id}</strong><small>{c.customerName}</small></span></div></td><td><span className="cell-main">{money(c.principal)}</span><small className="cell-sub">Total previsto: {money(c.total)}</small></td><td><div className="progress-cell"><div className="progress-track"><i style={{ width: `${Math.min(100, c.paid / c.installments * 100)}%` }}/></div><small>{c.paid} de {c.installments} parcelas</small></div></td><td>{dateBR(c.dueDate)}</td><td><Status>{c.status}</Status></td><td><button className="button button-outline button-small" onClick={() => setExpandedContract(expandedContract === c.id ? null : c.id)}>{expandedContract === c.id ? 'Ocultar' : 'Ver parcelas'}</button></td></tr>{expandedContract === c.id && <tr className="installment-detail-row"><td colSpan={6}><div className="installment-detail"><div className="installment-detail-head"><div><strong>Cronograma de parcelas</strong><small>Valores divididos pelo total do contrato; a última parcela ajusta eventuais centavos. Recebimentos parciais são alocados às parcelas mais antigas.</small></div><strong>{money(c.total)}</strong></div><div className="table-wrap"><table><thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Recebido</th><th>Saldo</th><th>Situação</th></tr></thead><tbody>{buildInstallmentSchedule(c, payments).map(row => <tr key={row.number}><td>{String(row.number).padStart(2, '0')} / {c.installments}</td><td>{dateBR(row.dueDate)}</td><td>{money(row.amount)}</td><td>{money(row.received)}</td><td>{money(row.balance)}</td><td><span className={`installment-status installment-${row.status === 'Quitada' ? 'paid' : row.status === 'Parcial' ? 'partial' : row.status === 'Atrasada' ? 'overdue' : 'upcoming'}`}>{row.status}</span></td></tr>)}</tbody></table></div></div></td></tr>}</React.Fragment>)}</tbody></table>{filtered.length === 0 && <EmptyState title="Nenhum contrato encontrado" text="Ajuste sua busca ou cadastre um contrato."/>}</div></section></>;
 }
 function Receivables({ contracts, payments, onNew }: { contracts: Contract[]; payments: Payment[]; onNew: () => void }) {
   const due = contracts.filter(c => c.status !== 'Quitado');
