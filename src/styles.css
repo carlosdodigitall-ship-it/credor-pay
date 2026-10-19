@@ -658,3 +658,25 @@ tbody tr:hover { background: #fbfcff; }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 @keyframes slideUp { from { opacity: 0; transform: translateY(25px); } to { opacity: 1; transform: translateY(0); } }
+
+
+/* Installment schedule */
+.installment-detail-row > td { padding: 0 !important; background: #f8faff; }
+.installment-detail { padding: 18px; border-top: 1px solid var(--border); }
+.installment-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+.installment-detail-head > div { display: grid; gap: 5px; }
+.installment-detail-head strong { color: #213a5f; font-size: 13px; }
+.installment-detail-head small { max-width: 680px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.installment-detail .table-wrap { border: 1px solid var(--border); border-radius: 10px; background: white; }
+.installment-detail table { min-width: 620px; }
+.installment-detail th, .installment-detail td { padding: 11px 13px; font-size: 11px; }
+.installment-status { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.installment-paid { color: #137a59; background: #e5f7ef; }
+.installment-partial { color: #7956bd; background: #f0eaff; }
+.installment-overdue { color: #b23b43; background: #fff0f0; }
+.installment-upcoming { color: #315d9d; background: #edf4ff; }
+@media (max-width: 640px) {
+  .installment-detail { padding: 12px; }
+  .installment-detail-head { gap: 10px; }
+  .installment-detail-head > strong { font-size: 12px; white-space: nowrap; }
+}
