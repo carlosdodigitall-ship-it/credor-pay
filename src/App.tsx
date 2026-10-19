@@ -248,6 +248,7 @@ export default function App() {
       const firstUnpaid = schedule.find(row => row.balance > 0.009);
       return {
         ...item,
+        firstDueDate: item.firstDueDate || item.dueDate,
         paidAmount: nextPaidAmount,
         paid: schedule.filter(row => row.balance <= 0.009).length,
         dueDate: firstUnpaid?.dueDate || item.dueDate,
