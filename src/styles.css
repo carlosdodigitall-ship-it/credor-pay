@@ -777,3 +777,181 @@ tbody tr:hover { background: #fbfcff; }
 
 @media (min-width: 701px) { .customer-balance-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .customer-balance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+
+/* Adaptive responsive layer — Credor Pay */
+:root {
+  --layout-gutter: clamp(14px, 2.4vw, 34px);
+  --surface-radius: 12px;
+}
+html { max-width: 100%; overflow-x: clip; scroll-padding-top: 76px; }
+body { width: 100%; overflow-x: clip; }
+#root, .app-shell, .main-area, .page-content { min-width: 0; max-width: 100%; }
+img, svg, canvas, video { max-width: 100%; }
+button, input, select, textarea { max-width: 100%; }
+button { touch-action: manipulation; }
+.panel, .metric-card, .customer-profile, .settings-panel, .customer-detail-block,
+.overview-grid > *, .settings-grid > *, .modal-card, .table-wrap { min-width: 0; }
+.page-content { padding-left: var(--layout-gutter); padding-right: var(--layout-gutter); }
+.topbar { padding-left: var(--layout-gutter); padding-right: var(--layout-gutter); }
+.metric-card > strong { white-space: normal; overflow-wrap: anywhere; }
+.table-wrap { max-width: 100%; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; border-radius: 9px; }
+.table-wrap table { width: max-content; min-width: 100%; }
+.form-two-col > *, .form-stack > label, .modal-form label { min-width: 0; }
+.form-stack input, .form-stack select, .form-stack textarea,
+.modal-form input, .modal-form select, .customer-inline-form input,
+.customer-inline-form select, .customer-inline-form textarea { width: 100%; min-width: 0; }
+.customer-profile, .panel { overflow-wrap: anywhere; }
+.customer-identity, .customer-history-item, .customer-history-item > div { min-width: 0; }
+.customer-balance-grid strong, .money-cell, .customer-history-value > strong { overflow-wrap: anywhere; }
+.modal-backdrop { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+.modal-card { max-height: min(90dvh, 800px); max-height: min(90vh, 800px); max-height: min(90dvh, 800px); overscroll-behavior: contain; }
+.customer-registration-form { max-height: min(68dvh, 700px); }
+:where(button, a, input, select, textarea) { scroll-margin-block: 12px; }
+:where(button, a):focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #8db9ff; outline-offset: 2px; }
+@media (hover: none), (pointer: coarse) {
+  .button { min-height: 44px; }
+  .icon-button { width: 44px; height: 44px; }
+  .nav-link { min-height: 44px; }
+}
+@media (max-width: 1023px) {
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overview-grid { grid-template-columns: minmax(0, 1fr); }
+  .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-grid .full-span { grid-column: 1 / -1; }
+  .customer-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero { gap: 28px; }
+  .features-section, .steps-section, .security-section, .trust-strip, .marketing-footer { max-width: none; }
+}
+@media (max-width: 820px) {
+  .sidebar { width: min(300px, calc(100vw - 48px)); max-width: calc(100vw - 48px); transform: translateX(-105%); box-shadow: none; transition: transform .22s ease; }
+  .sidebar.sidebar-open { transform: translateX(0); box-shadow: 15px 0 50px #10213b1c; }
+  .sidebar-collapsed { width: min(300px, calc(100vw - 48px)); }
+  .sidebar-collapsed .sidebar-brand-row { justify-content: space-between; padding: 0 7px 21px; }
+  .sidebar-collapsed .brand > span:last-child, .sidebar-collapsed .workspace-copy,
+  .sidebar-collapsed .workspace-switch > svg, .sidebar-collapsed .nav-group-label,
+  .sidebar-collapsed .nav-link > span, .sidebar-collapsed .nav-count,
+  .sidebar-collapsed .help-card, .sidebar-collapsed .profile-copy,
+  .sidebar-collapsed .profile-row > .icon-button { display: initial; }
+  .sidebar-collapsed .brand > span:last-child { display: inline; }
+  .sidebar-collapsed .workspace-copy, .sidebar-collapsed .profile-copy { display: grid; }
+  .sidebar-collapsed .nav-group-label { display: block; }
+  .sidebar-collapsed .nav-link > span { display: inline; }
+  .sidebar-collapsed .nav-count { display: inline-grid; }
+  .sidebar-collapsed .help-card { display: block; }
+  .sidebar-collapsed .profile-row > .icon-button { display: inline-grid; }
+  .sidebar-collapsed .workspace-switch, .sidebar-collapsed .nav-link, .sidebar-collapsed .profile-row { justify-content: flex-start; }
+  .sidebar-collapsed .workspace-switch { padding: 11px 9px; }
+  .sidebar-collapsed .nav-link { padding: 0 11px; }
+  .sidebar-collapsed .nav-link.active:before { left: -14px; }
+  .sidebar-close { display: inline-grid; }
+  .collapse-button { display: none; }
+  .mobile-scrim { position: fixed; inset: 0; z-index: 19; display: block; border: 0; background: #10213b70; backdrop-filter: blur(2px); }
+  .main-area, .main-area.main-collapsed { margin-left: 0; }
+  .mobile-menu { display: inline-grid; }
+  .topbar { min-height: 60px; height: auto; gap: 10px; }
+  .page-content { padding-top: 22px; }
+  .page-heading { align-items: flex-start; }
+  .marketing-nav { padding-left: 20px; padding-right: 20px; }
+}
+@media (max-width: 700px) {
+  :root { --layout-gutter: 14px; }
+  .page-content { padding-top: 20px; padding-bottom: 20px; }
+  .topbar { min-height: 58px; padding-top: 6px; padding-bottom: 6px; }
+  .topbar-left, .topbar-actions { min-width: 0; gap: 7px; }
+  .breadcrumb { min-width: 0; font-size: 10px; }
+  .breadcrumb strong { min-width: 0; max-width: 42vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+  .demo-pill { font-size: 9px; white-space: nowrap; }
+  .topbar-actions { gap: 4px; }
+  .topbar-actions .avatar-small, .topbar-divider { display: none; }
+  .page-heading { gap: 12px; }
+  .page-heading h1 { font-size: clamp(23px, 6vw, 28px); overflow-wrap: anywhere; }
+  .page-heading p { font-size: 12px; }
+  .heading-action { width: 100%; }
+  .heading-action .button { width: 100%; white-space: normal; }
+  .metric-grid, .compact-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .metric-card { padding: 13px; }
+  .metric-card-top { gap: 7px; font-size: 11px; line-height: 1.45; }
+  .metric-card > strong { font-size: clamp(16px, 4.6vw, 22px); letter-spacing: -.4px; }
+  .metric-card-foot, .change-positive { font-size: 10px; }
+  .overview-grid { grid-template-columns: minmax(0, 1fr); }
+  .panel-heading { gap: 10px; }
+  .panel-heading h2 { font-size: 13px; }
+  .panel-heading p { font-size: 11px; }
+  .chart-summary strong { font-size: clamp(18px, 5vw, 24px); }
+  .chart-y-labels, .chart-x-labels { font-size: 9px; }
+  .portfolio-legend { grid-template-columns: 1fr; }
+  .portfolio-legend span { flex-wrap: wrap; }
+  .portfolio-legend b { margin-left: auto; }
+  .quick-actions { grid-template-columns: 1fr; }
+  .quick-actions > button { min-height: 62px; }
+  .table-toolbar { align-items: stretch; flex-direction: column; gap: 10px; }
+  .search-box { width: 100%; min-width: 0; }
+  .toolbar-actions { display: flex; flex-wrap: wrap; justify-content: stretch; gap: 8px; }
+  .toolbar-actions > * { flex: 1 1 auto; }
+  .customer-list-filters { gap: 10px; }
+  .customer-balance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .customer-detail-grid { grid-template-columns: minmax(0, 1fr); }
+  .customer-history-item { align-items: flex-start; }
+  .customer-history-value { max-width: 42%; text-align: right; }
+  .customer-history-value > strong { white-space: normal; }
+  .form-two-col { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .modal-backdrop { align-items: end; padding: 0; }
+  .modal-card { width: 100%; max-width: none; max-height: 90dvh; max-height: 90vh; max-height: 90dvh; padding: 20px 16px max(18px, env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; }
+  .modal-head { gap: 10px; margin-bottom: 16px; }
+  .modal-head h2 { font-size: 21px; }
+  .modal-head p { font-size: 12px; }
+  .modal-form label, .customer-inline-form label { font-size: 12px; }
+  .modal-form input, .modal-form select, .customer-inline-form input, .customer-inline-form select { min-height: 44px; height: auto; }
+  .customer-registration-form { max-height: none; overflow: visible; }
+  .modal-actions { position: sticky; bottom: calc(-1 * max(18px, env(safe-area-inset-bottom))); margin: 8px -16px calc(-1 * max(18px, env(safe-area-inset-bottom))); padding: 12px 16px max(18px, env(safe-area-inset-bottom)); background: #fff; }
+  .modal-actions .button { flex: 1 1 0; min-width: 0; white-space: normal; }
+  .form-hint { font-size: 11px; }
+  .settings-grid { grid-template-columns: minmax(0, 1fr); }
+  .settings-grid .full-span { grid-column: auto; }
+  .settings-field { align-items: flex-start; }
+  .settings-field > strong { overflow-wrap: anywhere; text-align: right; }
+  .settings-actions { align-items: stretch; }
+  .settings-actions .button { width: 100%; }
+  .app-footer { align-items: flex-start; gap: 8px; line-height: 1.5; }
+  .toast { right: 12px; left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); max-width: none; font-size: 12px; }
+  .hero h1 { font-size: clamp(35px, 10.4vw, 48px); line-height: 1.08; letter-spacing: -1.9px; overflow-wrap: anywhere; }
+  .hero-copy > p { font-size: 14px; }
+  .hero-actions { flex-direction: column; align-items: stretch; }
+  .hero-actions .button { width: 100%; }
+  .dashboard-preview { max-width: 100%; }
+  .float-card { max-width: 78%; padding: 9px 10px; }
+  .trust-strip, .features-section, .steps-section, .security-section, .marketing-footer { margin-left: 14px; margin-right: 14px; }
+  .features-section, .steps-section { padding-top: 60px; padding-bottom: 60px; }
+  .security-section { grid-template-columns: minmax(0, 1fr); }
+  .security-section > .button { grid-column: auto; width: 100%; }
+  .cta-section { margin: 0 8px; padding-left: 16px; padding-right: 16px; }
+}
+@media (max-width: 359px) {
+  :root { --layout-gutter: 10px; }
+  .topbar { padding-left: 10px; padding-right: 10px; }
+  .demo-pill { padding: 5px; font-size: 8px; }
+  .metric-grid, .compact-metrics { gap: 7px; }
+  .metric-card { padding: 10px; }
+  .metric-card-top { font-size: 10px; }
+  .metric-icon { width: 28px; height: 28px; }
+  .customer-balance-grid { gap: 6px; }
+  .customer-balance-grid > div { padding: 9px 7px; }
+  .modal-card { padding-left: 13px; padding-right: 13px; }
+  .modal-actions { margin-left: -13px; margin-right: -13px; padding-left: 13px; padding-right: 13px; }
+  .hero h1 { font-size: 35px; letter-spacing: -1.8px; }
+}
+@media (min-width: 1440px) {
+  .page-content { padding-left: clamp(34px, 3vw, 54px); padding-right: clamp(34px, 3vw, 54px); }
+  .metric-grid { gap: 16px; }
+  .panel { border-radius: 14px; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .modal-backdrop { align-items: start; }
+  .modal-card { max-height: 94dvh; }
+  .customer-registration-form { max-height: 58dvh; overflow-y: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
